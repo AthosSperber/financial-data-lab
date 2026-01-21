@@ -27,6 +27,10 @@ def ocr_path(store: Path, receipt_id: str) -> Path:
     return receipts_root(store) / receipt_id / "ocr.v1.json"
 
 
+def pdf_pages_path(store: Path, receipt_id: str) -> Path:
+    return receipts_root(store) / receipt_id / "pdf_pages.v1.json"
+
+
 def events_path(store: Path) -> Path:
     return store / "events" / "events.v1.jsonl"
 

@@ -17,6 +17,7 @@ fdl = "financial_data_lab.cli:main"
 [project.optional-dependencies]
 test = ["pytest"]
 ocr = ["pytesseract", "Pillow"]
+ocr_pdf = ["pymupdf"]
 
 [tool.setuptools]
 package-dir = {"" = "src"}

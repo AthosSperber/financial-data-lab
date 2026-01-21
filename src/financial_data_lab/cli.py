@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 from financial_data_lab.core.hashing import receipt_id_from_sha256, sha256_file
-from financial_data_lab.store import artifacts, events, export, layout, manifests, ocr
+from financial_data_lab.store import artifacts, events, export, layout, manifests, ocr, pdf_pages
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -180,8 +180,49 @@ def _cmd_ocr(receipt_id: str, store: Path, lang: str) -> int:
     original_name = source.get("original_filename") or object_path.name
     suffix = Path(original_name).suffix.lower()
     if media_type == "application/pdf" or suffix == ".pdf":
-        print("PDF OCR is not supported yet.", file=sys.stderr)
-        return 1
+        pdf_pages_path = pdf_pages.write_pdf_pages_observed(
+            store=store,
+            receipt_id=receipt_id,
+            pdf_object_path=object_path,
+        )
+        events.append_receipt_pdf_pages_observed(
+            store=store,
+            receipt_id=receipt_id,
+            pdf_pages_path=pdf_pages_path,
+        )
+        pdf_pages_payload = json.loads(pdf_pages_path.read_text(encoding="utf-8"))
+        pages = pdf_pages_payload.get("observed", {}).get("pages", [])
+        from PIL import Image
+        import pytesseract
+
+        page_results = []
+        for page in pages:
+            image_path_value = page["image"]["object_path"]
+            image_path = Path(image_path_value)
+            if not image_path.is_absolute():
+                image_path = store / image_path
+            with Image.open(image_path) as image:
+                page_text = pytesseract.image_to_string(image, lang=lang)
+            page_results.append({"page": page["page"], "text": page_text})
+        joined_text = "\n\n---\n\n".join(result["text"] for result in page_results)
+        engine_version = str(pytesseract.get_tesseract_version())
+        ocr_artifact_path = ocr.write_ocr_observed(
+            store=store,
+            receipt_id=receipt_id,
+            object_path=object_path,
+            lang=lang,
+            text=joined_text,
+            pages=page_results,
+            engine_version=engine_version,
+        )
+        events.append_receipt_ocr_observed(
+            store=store,
+            receipt_id=receipt_id,
+            ocr_path=ocr_artifact_path,
+        )
+        ocr_ref = layout.relative_to_store(store, ocr_artifact_path)
+        print(f"status: ok ocr_path: {ocr_ref} pages: {len(page_results)}")
+        return 0
     if suffix not in ocr.SUPPORTED_IMAGE_EXTENSIONS:
         print(f"Unsupported file type for OCR: {suffix}", file=sys.stderr)
         return 1

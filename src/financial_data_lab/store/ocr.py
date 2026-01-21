@@ -22,7 +22,11 @@ def build_ocr_observed(
     engine_version: str,
     lang: str,
     created_at: str,
+    pages: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
+    observed: dict[str, Any] = {"text": text}
+    if pages is not None:
+        observed["pages"] = pages
     return {
         "schema": OCR_SCHEMA,
         "receipt_id": receipt_id,
@@ -35,9 +39,7 @@ def build_ocr_observed(
             "version": engine_version,
             "lang": lang,
         },
-        "observed": {
-            "text": text,
-        },
+        "observed": observed,
     }
 
 
@@ -48,18 +50,24 @@ def write_ocr_observed(
     object_path: Path,
     lang: str = "por",
     created_at: str | None = None,
+    text: str | None = None,
+    pages: list[dict[str, Any]] | None = None,
+    engine_version: str | None = None,
 ) -> Path:
     ocr_path = layout.ocr_path(store, receipt_id)
     if ocr_path.exists():
         return ocr_path
     if created_at is None:
         created_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-    from PIL import Image
-    import pytesseract
+    if text is None:
+        from PIL import Image
+        import pytesseract
 
-    with Image.open(object_path) as image:
-        text = pytesseract.image_to_string(image, lang=lang)
-    engine_version = str(pytesseract.get_tesseract_version())
+        with Image.open(object_path) as image:
+            text = pytesseract.image_to_string(image, lang=lang)
+        engine_version = str(pytesseract.get_tesseract_version())
+    if engine_version is None:
+        raise ValueError("engine_version is required when text is provided.")
     object_ref = layout.relative_to_store(store, object_path)
     payload = build_ocr_observed(
         receipt_id=receipt_id,
@@ -69,6 +77,7 @@ def write_ocr_observed(
         engine_version=engine_version,
         lang=lang,
         created_at=created_at,
+        pages=pages,
     )
     write_canonical_json(ocr_path, payload)
     return ocr_path
