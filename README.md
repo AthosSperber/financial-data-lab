@@ -9,6 +9,7 @@ of absolute paths.
 Schema identifiers:
 - Manifest: `financial-data-lab/manifest.v1`
 - Event: `financial-data-lab/event.v1`
+- OCR: `financial-data-lab/ocr.v1`
 
 ## Setup
 
@@ -36,6 +37,15 @@ fdl show rcpt_1234abcd5678ef00 --store ./data
 
 `fdl show` prints the manifest (when valid JSON) followed by a single-line summary:
 `status: ok|corrupted object_exists: true|false hash_match: true|false`.
+
+## OCR a receipt (images and PDFs)
+
+```bash
+fdl ocr rcpt_1234abcd5678ef00 --store ./data --lang por
+```
+
+OCR supports image formats (png/jpg/jpeg/webp) and PDFs. PDF pages are rendered to PNG images and
+stored as content-addressed objects, tracked in `receipts/<receipt_id>/pdf_pages.v1.json`.
 
 ## Export receipts
 

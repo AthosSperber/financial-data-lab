@@ -55,3 +55,57 @@ def append_receipt_ingested(
     }
     append_canonical_json_line(events_path, payload)
     return True
+
+
+def append_receipt_ocr_observed(
+    *,
+    store: Path,
+    receipt_id: str,
+    ocr_path: Path,
+    ingested_at: str | None = None,
+) -> bool:
+    events_path = layout.events_path(store)
+    event_type = "receipt.ocr_observed"
+    if _event_exists(events_path, receipt_id, event_type):
+        return False
+    if ingested_at is None:
+        ingested_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    ocr_ref = layout.relative_to_store(store, ocr_path)
+    payload: dict[str, Any] = {
+        "schema": EVENT_SCHEMA,
+        "ts": ingested_at,
+        "type": event_type,
+        "receipt_id": receipt_id,
+        "refs": {
+            "ocr_path": str(ocr_ref),
+        },
+    }
+    append_canonical_json_line(events_path, payload)
+    return True
+
+
+def append_receipt_pdf_pages_observed(
+    *,
+    store: Path,
+    receipt_id: str,
+    pdf_pages_path: Path,
+    ingested_at: str | None = None,
+) -> bool:
+    events_path = layout.events_path(store)
+    event_type = "receipt.pdf_pages_observed"
+    if _event_exists(events_path, receipt_id, event_type):
+        return False
+    if ingested_at is None:
+        ingested_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    pdf_pages_ref = layout.relative_to_store(store, pdf_pages_path)
+    payload: dict[str, Any] = {
+        "schema": EVENT_SCHEMA,
+        "ts": ingested_at,
+        "type": event_type,
+        "receipt_id": receipt_id,
+        "refs": {
+            "pdf_pages_path": str(pdf_pages_ref),
+        },
+    }
+    append_canonical_json_line(events_path, payload)
+    return True
