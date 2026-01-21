@@ -11,7 +11,7 @@ from financial_data_lab.core.jsoncanon import write_canonical_json
 from financial_data_lab.core.hashing import receipt_id_from_sha256
 from financial_data_lab.store import layout
 
-MANIFEST_SCHEMA = "fdl.receipt.manifest.v1"
+MANIFEST_SCHEMA = "financial-data-lab/manifest.v1"
 
 
 def build_manifest(

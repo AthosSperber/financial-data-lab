@@ -17,7 +17,7 @@ def test_receipt_id_deterministic() -> None:
 
 def test_manifest_canonical(tmp_path: Path) -> None:
     manifest = {
-        "schema": "fdl.receipt.manifest.v1",
+        "schema": "financial-data-lab/manifest.v1",
         "receipt_id": "rcpt_1234",
         "ingested_at": "2024-01-01T00:00:00Z",
         "source": {

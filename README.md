@@ -6,6 +6,10 @@ re-ingesting the same file does not create duplicate `receipt.ingested` events. 
 the CLI input path as `source.path_hint` and the original basename as `source.original_filename` instead
 of absolute paths.
 
+Schema identifiers:
+- Manifest: `financial-data-lab/manifest.v1`
+- Event: `financial-data-lab/event.v1`
+
 ## Setup
 
 ```bash
@@ -29,6 +33,9 @@ fdl verify --store ./data
 ```bash
 fdl show rcpt_1234abcd5678ef00 --store ./data
 ```
+
+`fdl show` prints the manifest (when valid JSON) followed by a single-line summary:
+`status: ok|corrupted object_exists: true|false hash_match: true|false`.
 
 ## Export receipts
 

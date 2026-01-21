@@ -10,7 +10,7 @@ from typing import Any
 from financial_data_lab.core.jsoncanon import append_canonical_json_line
 from financial_data_lab.store import layout
 
-EVENT_SCHEMA = "fdl.event.v1"
+EVENT_SCHEMA = "financial-data-lab/event.v1"
 
 
 def _event_exists(path: Path, receipt_id: str, event_type: str) -> bool:

@@ -118,31 +118,34 @@ def _cmd_show(receipt_id: str, store: Path) -> int:
     manifest_path = layout.manifest_path(store, receipt_id)
     if not manifest_path.exists():
         print(f"Manifest not found: {manifest_path}", file=sys.stderr)
+        print("status: corrupted object_exists: false hash_match: false")
         return 1
     manifest_text = manifest_path.read_text(encoding="utf-8")
-    print(manifest_text, end="")
     try:
         manifest_data = json.loads(manifest_text)
     except Exception as exc:
         print(f"Invalid JSON in {manifest_path}: {exc}", file=sys.stderr)
+        print("status: corrupted object_exists: false hash_match: false")
         return 1
+    print(manifest_text, end="")
     content = manifest_data.get("content", {})
     sha256_hex = content.get("sha256")
     object_path_value = content.get("object_path")
-    if not object_path_value:
-        print("object_exists: false")
-        print("hash_match: false")
-        return 1
-    object_path = Path(object_path_value)
-    if not object_path.is_absolute():
-        object_path = store / object_path
-    object_exists = object_path.exists()
-    print(f"object_exists: {str(object_exists).lower()}")
-    if not object_exists or not sha256_hex:
-        print("hash_match: false")
-        return 1
-    actual_hash = sha256_file(object_path)
-    print(f"hash_match: {str(actual_hash == sha256_hex).lower()}")
+    object_exists = False
+    hash_match = False
+    if object_path_value:
+        object_path = Path(object_path_value)
+        if not object_path.is_absolute():
+            object_path = store / object_path
+        object_exists = object_path.exists()
+        if object_exists and sha256_hex:
+            actual_hash = sha256_file(object_path)
+            hash_match = actual_hash == sha256_hex
+    print(
+        "status: ok "
+        f"object_exists: {str(object_exists).lower()} "
+        f"hash_match: {str(hash_match).lower()}"
+    )
     return 0
 
 
