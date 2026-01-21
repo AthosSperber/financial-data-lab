@@ -13,14 +13,18 @@ def _ingest(path: Path, store: Path) -> None:
         store=store,
         sha256_hex=sha256_hex,
         source_path=path,
+        path_hint=str(path),
+        original_filename=path.name,
         object_path=object_path,
         ingested_at="2024-01-01T00:00:00Z",
     )
+    manifest_ref = layout.relative_to_store(store, manifest_path)
+    object_ref = layout.relative_to_store(store, object_path)
     events.append_receipt_ingested(
         store=store,
         receipt_id=receipt_id,
-        manifest_path=manifest_path,
-        object_path=object_path,
+        manifest_path=manifest_ref,
+        object_path=object_ref,
         ingested_at="2024-01-01T00:00:00Z",
     )
 

@@ -16,7 +16,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     ingest_parser = subparsers.add_parser("ingest", help="Ingest a file")
-    ingest_parser.add_argument("path", type=Path)
+    ingest_parser.add_argument("path")
     ingest_parser.add_argument("--store", type=Path, default=layout.DEFAULT_STORE)
 
     export_parser = subparsers.add_parser("export", help="Export data")
@@ -28,19 +28,26 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     verify_parser = subparsers.add_parser("verify", help="Verify store integrity")
     verify_parser.add_argument("--store", type=Path, default=layout.DEFAULT_STORE)
 
+    show_parser = subparsers.add_parser("show", help="Show a receipt manifest")
+    show_parser.add_argument("receipt_id")
+    show_parser.add_argument("--store", type=Path, default=layout.DEFAULT_STORE)
+
     return parser.parse_args(argv)
 
 
-def _cmd_ingest(path: Path, store: Path) -> int:
-    if not path.exists():
-        print(f"File not found: {path}", file=sys.stderr)
+def _cmd_ingest(path_hint: str, store: Path) -> int:
+    source_path = Path(path_hint)
+    if not source_path.exists():
+        print(f"File not found: {path_hint}", file=sys.stderr)
         return 1
-    sha256_hex, object_path, _ = artifacts.store_object(path, store)
+    sha256_hex, object_path, _ = artifacts.store_object(source_path, store)
     receipt_id = receipt_id_from_sha256(sha256_hex)
     manifest_path = manifests.write_manifest(
         store=store,
         sha256_hex=sha256_hex,
-        source_path=path,
+        source_path=source_path,
+        path_hint=path_hint,
+        original_filename=source_path.name,
         object_path=object_path,
     )
     manifest_ref = layout.relative_to_store(store, manifest_path)
@@ -78,7 +85,12 @@ def _cmd_verify(store: Path) -> int:
             continue
         content = manifest_data.get("content", {})
         sha256_hex = content.get("sha256")
-        object_path = Path(content.get("object_path", ""))
+        object_path_value = content.get("object_path")
+        if not object_path_value:
+            print(f"Missing object_path in {manifest_path}", file=sys.stderr)
+            errors += 1
+            continue
+        object_path = Path(object_path_value)
         if not object_path.is_absolute():
             object_path = store / object_path
         if not sha256_hex:
@@ -102,6 +114,38 @@ def _cmd_verify(store: Path) -> int:
     return 0
 
 
+def _cmd_show(receipt_id: str, store: Path) -> int:
+    manifest_path = layout.manifest_path(store, receipt_id)
+    if not manifest_path.exists():
+        print(f"Manifest not found: {manifest_path}", file=sys.stderr)
+        return 1
+    manifest_text = manifest_path.read_text(encoding="utf-8")
+    print(manifest_text, end="")
+    try:
+        manifest_data = json.loads(manifest_text)
+    except Exception as exc:
+        print(f"Invalid JSON in {manifest_path}: {exc}", file=sys.stderr)
+        return 1
+    content = manifest_data.get("content", {})
+    sha256_hex = content.get("sha256")
+    object_path_value = content.get("object_path")
+    if not object_path_value:
+        print("object_exists: false")
+        print("hash_match: false")
+        return 1
+    object_path = Path(object_path_value)
+    if not object_path.is_absolute():
+        object_path = store / object_path
+    object_exists = object_path.exists()
+    print(f"object_exists: {str(object_exists).lower()}")
+    if not object_exists or not sha256_hex:
+        print("hash_match: false")
+        return 1
+    actual_hash = sha256_file(object_path)
+    print(f"hash_match: {str(actual_hash == sha256_hex).lower()}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     if args.command == "ingest":
@@ -110,6 +154,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_export_receipts(args.store, args.out)
     if args.command == "verify":
         return _cmd_verify(args.store)
+    if args.command == "show":
+        return _cmd_show(args.receipt_id, args.store)
     raise SystemExit("Unknown command")
 
 

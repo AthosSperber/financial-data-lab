@@ -19,6 +19,7 @@ def export_receipts(store: Path, out_path: Path | None = None) -> Path:
         out_path.write_text("", encoding="utf-8")
         return out_path
     manifests = sorted(receipts_root.glob("*/manifest.v1.json"))
+    out_path.parent.mkdir(parents=True, exist_ok=True)
     if out_path.exists():
         out_path.unlink()
     for manifest_path in manifests:

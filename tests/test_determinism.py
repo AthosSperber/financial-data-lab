@@ -20,7 +20,12 @@ def test_manifest_canonical(tmp_path: Path) -> None:
         "schema": "fdl.receipt.manifest.v1",
         "receipt_id": "rcpt_1234",
         "ingested_at": "2024-01-01T00:00:00Z",
-        "source": {"path": "source.txt", "media_type": "text/plain", "byte_size": 3},
+        "source": {
+            "path_hint": "source.txt",
+            "original_filename": "source.txt",
+            "media_type": "text/plain",
+            "byte_size": 3,
+        },
         "content": {"sha256": "abc", "object_path": "objects/sha256/ab/cd/abc"},
         "observed": {},
         "inferred": {},

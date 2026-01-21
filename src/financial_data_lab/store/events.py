@@ -41,14 +41,16 @@ def append_receipt_ingested(
         return False
     if ingested_at is None:
         ingested_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    manifest_ref = layout.relative_to_store(store, manifest_path)
+    object_ref = layout.relative_to_store(store, object_path)
     payload: dict[str, Any] = {
         "schema": EVENT_SCHEMA,
         "ts": ingested_at,
         "type": event_type,
         "receipt_id": receipt_id,
         "refs": {
-            "manifest_path": str(manifest_path),
-            "object_path": str(object_path),
+            "manifest_path": str(manifest_ref),
+            "object_path": str(object_ref),
         },
     }
     append_canonical_json_line(events_path, payload)

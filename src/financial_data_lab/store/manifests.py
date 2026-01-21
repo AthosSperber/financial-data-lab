@@ -19,6 +19,8 @@ def build_manifest(
     receipt_id: str,
     sha256_hex: str,
     source_path: Path,
+    path_hint: str,
+    original_filename: str,
     object_path: Path,
     ingested_at: str | None = None,
 ) -> dict[str, Any]:
@@ -31,7 +33,8 @@ def build_manifest(
         "receipt_id": receipt_id,
         "ingested_at": ingested_at,
         "source": {
-            "path": str(source_path),
+            "path_hint": path_hint,
+            "original_filename": original_filename,
             "media_type": media_type,
             "byte_size": byte_size,
         },
@@ -49,6 +52,8 @@ def write_manifest(
     store: Path,
     sha256_hex: str,
     source_path: Path,
+    path_hint: str,
+    original_filename: str,
     object_path: Path,
     ingested_at: str | None = None,
 ) -> Path:
@@ -61,6 +66,8 @@ def write_manifest(
         receipt_id=receipt_id,
         sha256_hex=sha256_hex,
         source_path=source_path,
+        path_hint=path_hint,
+        original_filename=original_filename,
         object_path=object_ref,
         ingested_at=ingested_at,
     )

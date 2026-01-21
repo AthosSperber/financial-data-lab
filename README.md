@@ -2,7 +2,9 @@
 
 Phase 1 provides a local-only, CLI-only pipeline for ingesting receipt files into an append-only store.
 Manifests are written in canonical JSON and events are de-duplicated by `(receipt_id, type)` so
-re-ingesting the same file does not create duplicate `receipt.ingested` events.
+re-ingesting the same file does not create duplicate `receipt.ingested` events. Source metadata stores
+the CLI input path as `source.path_hint` and the original basename as `source.original_filename` instead
+of absolute paths.
 
 ## Setup
 
@@ -20,6 +22,12 @@ fdl ingest path/to/receipt.pdf --store ./data
 
 ```bash
 fdl verify --store ./data
+```
+
+## Show a receipt
+
+```bash
+fdl show rcpt_1234abcd5678ef00 --store ./data
 ```
 
 ## Export receipts
