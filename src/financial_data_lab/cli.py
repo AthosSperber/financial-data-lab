@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 from financial_data_lab.core.hashing import receipt_id_from_sha256, sha256_file
-from financial_data_lab.store import artifacts, events, export, layout, manifests
+from financial_data_lab.store import artifacts, events, export, layout, manifests, ocr
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -31,6 +31,11 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     show_parser = subparsers.add_parser("show", help="Show a receipt manifest")
     show_parser.add_argument("receipt_id")
     show_parser.add_argument("--store", type=Path, default=layout.DEFAULT_STORE)
+
+    ocr_parser = subparsers.add_parser("ocr", help="Run OCR for a receipt image")
+    ocr_parser.add_argument("receipt_id")
+    ocr_parser.add_argument("--store", type=Path, default=layout.DEFAULT_STORE)
+    ocr_parser.add_argument("--lang", default="por")
 
     return parser.parse_args(argv)
 
@@ -149,6 +154,53 @@ def _cmd_show(receipt_id: str, store: Path) -> int:
     return 0
 
 
+def _cmd_ocr(receipt_id: str, store: Path, lang: str) -> int:
+    manifest_path = layout.manifest_path(store, receipt_id)
+    if not manifest_path.exists():
+        print(f"Manifest not found: {manifest_path}", file=sys.stderr)
+        return 1
+    try:
+        manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        print(f"Invalid JSON in {manifest_path}: {exc}", file=sys.stderr)
+        return 1
+    content = manifest_data.get("content", {})
+    object_path_value = content.get("object_path")
+    if not object_path_value:
+        print(f"Missing object_path in {manifest_path}", file=sys.stderr)
+        return 1
+    object_path = Path(object_path_value)
+    if not object_path.is_absolute():
+        object_path = store / object_path
+    if not object_path.exists():
+        print(f"Missing object: {object_path}", file=sys.stderr)
+        return 1
+    source = manifest_data.get("source", {})
+    media_type = source.get("media_type")
+    original_name = source.get("original_filename") or object_path.name
+    suffix = Path(original_name).suffix.lower()
+    if media_type == "application/pdf" or suffix == ".pdf":
+        print("PDF OCR is not supported yet.", file=sys.stderr)
+        return 1
+    if suffix not in ocr.SUPPORTED_IMAGE_EXTENSIONS:
+        print(f"Unsupported file type for OCR: {suffix}", file=sys.stderr)
+        return 1
+    ocr_artifact_path = ocr.write_ocr_observed(
+        store=store,
+        receipt_id=receipt_id,
+        object_path=object_path,
+        lang=lang,
+    )
+    events.append_receipt_ocr_observed(
+        store=store,
+        receipt_id=receipt_id,
+        ocr_path=ocr_artifact_path,
+    )
+    ocr_ref = layout.relative_to_store(store, ocr_artifact_path)
+    print(f"status: ok ocr_path: {ocr_ref}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     if args.command == "ingest":
@@ -159,6 +211,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_verify(args.store)
     if args.command == "show":
         return _cmd_show(args.receipt_id, args.store)
+    if args.command == "ocr":
+        return _cmd_ocr(args.receipt_id, args.store, args.lang)
     raise SystemExit("Unknown command")
 
 

@@ -16,6 +16,7 @@ fdl = "financial_data_lab.cli:main"
 
 [project.optional-dependencies]
 test = ["pytest"]
+ocr = ["pytesseract", "Pillow"]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
